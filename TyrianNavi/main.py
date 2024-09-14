@@ -1,5 +1,6 @@
 import random
 import arcade
+from explosion import Explosion
 from player import Player
 from enemy import Enemy
 from bullet import Bullet
@@ -16,9 +17,11 @@ class TyrianNavi(arcade.Window):
         self.enemy_list = None
         self.enemy_bullet_list = None
         self.time_since_last_spawn = 0
+        self.explosion_list = None
 
         self.background = None
         self.shoot_sound = None
+        self.explosion_sound = None
 
         self.health = None
 
@@ -26,6 +29,7 @@ class TyrianNavi(arcade.Window):
         # Cargar la imagen del fondo y el sonido del disparo
         self.background = arcade.load_texture("img/fondo.png")
         self.shoot_sound = arcade.load_sound("Sounds/laser.wav")
+        self.explosion_sound = arcade.load_sound("Sounds/explosion.wav")
 
         # Crear el jugador
         self.player_sprite = Player()
@@ -34,6 +38,7 @@ class TyrianNavi(arcade.Window):
         self.bullet_list = arcade.SpriteList()
         self.enemy_list = arcade.SpriteList()
         self.enemy_bullet_list = arcade.SpriteList()
+        self.explosion_list = arcade.SpriteList()
 
         # Configurar el health (vidas y puntaje)
         self.health = health(PLAYER_LIVES, 0)
@@ -53,6 +58,7 @@ class TyrianNavi(arcade.Window):
         self.bullet_list.draw()
         self.enemy_list.draw()
         self.enemy_bullet_list.draw()
+        self.explosion_list.draw()
 
         # Dibujar el HUD
         self.health.draw()
@@ -63,6 +69,7 @@ class TyrianNavi(arcade.Window):
             self.bullet_list.update()
             self.enemy_list.update()
             self.enemy_bullet_list.update()
+            self.explosion_list.update()
 
         # Controlar el tiempo para generar enemigos
         self.time_since_last_spawn += delta_time
@@ -111,6 +118,11 @@ class TyrianNavi(arcade.Window):
             if hit_list:
                 bullet.remove_from_sprite_lists()
                 for enemy in hit_list:
+                    explosion = Explosion(enemy.center_x, enemy.center_y)
+                    self.explosion_list.append(explosion)
+
+                    arcade.play_sound(self.explosion_sound)
+
                     enemy.remove_from_sprite_lists()
                     self.health.update_score(10)  # Sumar puntos al destruir un enemigo
 
@@ -120,9 +132,11 @@ class TyrianNavi(arcade.Window):
         # Solo quitar una vida por colisión con una bala enemiga
             self.health.lose_life()
         # Eliminar las balas enemigas que colisionaron con el jugador
-            for enemy_bullet in self.enemy_bullet_list:
-                if arcade.check_for_collision(self.player_sprite, enemy_bullet):
-                    enemy_bullet.remove_from_sprite_lists()
+            # for enemy_bullet in self.enemy_bullet_list:
+            #     if arcade.check_for_collision(self.player_sprite, enemy_bullet):
+            #         enemy_bullet.remove_from_sprite_lists()
+            for enemy_bullet in collided_enemies:
+                enemy_bullet.remove_from_sprite_lists()
 
 
 def main():
