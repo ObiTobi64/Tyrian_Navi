@@ -2,14 +2,14 @@ import random
 import arcade
 from explosion import Explosion
 from player import Player
-from enemy import Enemy
+from enemy import Enemy, FinalBoss
 from bullet import Bullet
 from constants import SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, PLAYER_LIVES, SPAWN_RATE
 from health import health
 
 class TyrianNavi(arcade.Window):
     def __init__(self):
-        super().__init__ (SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
+        super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
         arcade.set_background_color(arcade.color.BLACK)
 
         self.player_sprite = None
@@ -22,14 +22,23 @@ class TyrianNavi(arcade.Window):
         self.background = None
         self.shoot_sound = None
         self.explosion_sound = None
+        self.background_music = None  # Agregar esta línea para la música de fondo
 
         self.health = None
+        self.win_phase = False
+        self.final_boss = None
+        self.boss_health = 100
+        self.victory_message_shown = False
 
     def setup(self):
-        # Cargar la imagen del fondo y el sonido del disparo
+        # Cargar la imagen del fondo y los sonidos
         self.background = arcade.load_texture("img/fondo.png")
         self.shoot_sound = arcade.load_sound("Sounds/laser.wav")
         self.explosion_sound = arcade.load_sound("Sounds/explosion.wav")
+
+        # Cargar y reproducir la música de fondo
+        self.background_music = arcade.load_sound("Sounds/music.mp3")
+        arcade.play_sound(self.background_music, looping=True)  # Reproducir la música en bucle
 
         # Crear el jugador
         self.player_sprite = Player()
@@ -40,50 +49,73 @@ class TyrianNavi(arcade.Window):
         self.enemy_bullet_list = arcade.SpriteList()
         self.explosion_list = arcade.SpriteList()
 
-        # Configurar el health (vidas y puntaje)
+        # Configurar el health
         self.health = health(PLAYER_LIVES, 0)
 
     def spawn_enemy(self):
-        enemy = Enemy()
-        self.enemy_list.append(enemy)
+        if not self.win_phase:
+            enemy = Enemy()
+            self.enemy_list.append(enemy)
+
+    def spawn_final_boss(self):
+        self.final_boss = FinalBoss()
+        self.enemy_list.append(self.final_boss)
 
     def on_draw(self):
         arcade.start_render()
-
-        # Dibujar el fondo
         arcade.draw_lrwh_rectangle_textured(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, self.background)
-
-        # Dibujar sprites
         self.player_sprite.draw()
         self.bullet_list.draw()
         self.enemy_list.draw()
         self.enemy_bullet_list.draw()
         self.explosion_list.draw()
 
-        # Dibujar el HUD
+        if self.victory_message_shown:
+            arcade.draw_text(
+                "YOU WIN\nGracias por jugar TyrianNavi",
+                self.width // 2, self.height // 2,
+                arcade.color.WHITE, font_size=30, anchor_x="center", anchor_y="center"
+            )
+
         self.health.draw()
 
+        if self.win_phase and self.final_boss:
+            arcade.draw_text(f"Boss Health: {self.boss_health}", SCREEN_WIDTH // 2, SCREEN_HEIGHT - 30, arcade.color.RED, 24, anchor_x="center")
+
     def on_update(self, delta_time):
-        if not self.health.game_over:
+        if not self.health.game_over and not self.victory_message_shown:
             self.player_sprite.update()
             self.bullet_list.update()
             self.enemy_list.update()
             self.enemy_bullet_list.update()
             self.explosion_list.update()
 
-        # Controlar el tiempo para generar enemigos
-        self.time_since_last_spawn += delta_time
-        if self.time_since_last_spawn >= SPAWN_RATE:
-            self.spawn_enemy()
-            self.time_since_last_spawn = 0
+            if self.health.score >= 500 and not self.win_phase:
+                self.win_phase = True
+                arcade.schedule(self.start_final_level, 3)
+            
+            if self.win_phase and self.final_boss:
+                self.final_boss.update()
 
-        # Hacer que los enemigos disparen
-        for enemy in self.enemy_list:
-            if random.random() < 0.01:  # Probabilidad baja para no saturar de disparos
-                bullet = enemy.shoot()
-                self.enemy_bullet_list.append(bullet)
+            if self.boss_health <= 0:
+                self.on_victory()
+                return
 
-        self.check_collisions()
+            self.time_since_last_spawn += delta_time
+            if self.time_since_last_spawn >= SPAWN_RATE and not self.win_phase:
+                self.spawn_enemy()
+                self.time_since_last_spawn = 0
+
+            for enemy in self.enemy_list:
+                if random.random() < 0.01:
+                    bullet = enemy.shoot()
+                    self.enemy_bullet_list.append(bullet)
+
+            self.check_collisions()
+ 
+    def start_final_level(self, delta_time):
+        arcade.unschedule(self.start_final_level)
+        self.spawn_final_boss()
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.LEFT:
@@ -104,40 +136,47 @@ class TyrianNavi(arcade.Window):
             self.player_sprite.change_y = 0
 
     def shoot_bullet(self):
-        # Reproducir el sonido de disparo
         arcade.play_sound(self.shoot_sound)
-
-        # Crear y disparar una bala
         bullet = Bullet("img/B1.png", self.player_sprite)
         self.bullet_list.append(bullet)
 
     def check_collisions(self):
-        # Verificar colisiones entre balas y enemigos
         for bullet in self.bullet_list:
             hit_list = arcade.check_for_collision_with_list(bullet, self.enemy_list)
+        
             if hit_list:
                 bullet.remove_from_sprite_lists()
+
                 for enemy in hit_list:
                     explosion = Explosion(enemy.center_x, enemy.center_y)
                     self.explosion_list.append(explosion)
-
                     arcade.play_sound(self.explosion_sound)
 
-                    enemy.remove_from_sprite_lists()
-                    self.health.update_score(10)  # Sumar puntos al destruir un enemigo
+                    if isinstance(enemy, FinalBoss):
+                        self.boss_health -= 10
+                        print(f"Boss health: {self.boss_health}")
 
-        # Verificar colisiones entre el jugador y balas de enemigos
+                        if self.boss_health <= 0:
+                            self.on_victory()
+
+                    else:
+                        enemy.remove_from_sprite_lists()
+                        self.health.update_score(10)
+
         collided_enemies = arcade.check_for_collision_with_list(self.player_sprite, self.enemy_bullet_list)
+
         if collided_enemies:
-        # Solo quitar una vida por colisión con una bala enemiga
             self.health.lose_life()
-        # Eliminar las balas enemigas que colisionaron con el jugador
-            # for enemy_bullet in self.enemy_bullet_list:
-            #     if arcade.check_for_collision(self.player_sprite, enemy_bullet):
-            #         enemy_bullet.remove_from_sprite_lists()
             for enemy_bullet in collided_enemies:
                 enemy_bullet.remove_from_sprite_lists()
 
+    def on_victory(self):
+        self.win_phase = False
+        self.victory_message_shown = True
+        arcade.schedule(self.end_game, 5)
+
+    def end_game(self, delta_time):
+        arcade.close_window()
 
 def main():
     window = TyrianNavi()
