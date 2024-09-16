@@ -36,7 +36,7 @@ class FinalBoss(Enemy):
     def __init__(self):
         super().__init__()
         # Cargar una imagen diferente y más grande para el jefe
-        self.texture = arcade.load_texture(":resources:images/space_shooter/playerShip2_orange.png")
+        self.texture = arcade.load_texture(":resources:images/space_shooter/playerShip3_orange.png")
         self.scale = 1.5  # Ajustar el tamaño del jefe final
         self.center_x = SCREEN_WIDTH // 2
         self.center_y = SCREEN_HEIGHT - 100
