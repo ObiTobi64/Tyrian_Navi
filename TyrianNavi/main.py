@@ -22,7 +22,7 @@ class TyrianNavi(arcade.Window):
         self.background = None
         self.shoot_sound = None
         self.explosion_sound = None
-        self.background_music = None  # Agregar esta línea para la música de fondo
+        self.background_music = None  
 
         self.health = None
         self.win_phase = False
@@ -31,16 +31,13 @@ class TyrianNavi(arcade.Window):
         self.victory_message_shown = False
 
     def setup(self):
-        # Cargar la imagen del fondo y los sonidos
         self.background = arcade.load_texture("img/fondo.png")
         self.shoot_sound = arcade.load_sound("Sounds/laser.wav")
         self.explosion_sound = arcade.load_sound("Sounds/explosion.wav")
 
-        # Cargar y reproducir la música de fondo
         self.background_music = arcade.load_sound("Sounds/music.mp3")
-        arcade.play_sound(self.background_music, looping=True)  # Reproducir la música en bucle
+        arcade.play_sound(self.background_music, looping=True)  
 
-        # Crear el jugador
         self.player_sprite = Player()
 
         # Inicializar listas de balas y enemigos
@@ -49,7 +46,6 @@ class TyrianNavi(arcade.Window):
         self.enemy_bullet_list = arcade.SpriteList()
         self.explosion_list = arcade.SpriteList()
 
-        # Configurar el health
         self.health = health(PLAYER_LIVES, 0)
 
     def spawn_enemy(self):

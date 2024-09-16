@@ -80,7 +80,6 @@ class GameView(arcade.View):
                 self.game_over = True  # Marcar el juego como finalizado
                 self.win_time = time.time()  # Marca el tiempo de victoria
 
-        # Mostrar "You Win" durante 5 segundos después de derrotar al jefe
         if self.game_over:
             if time.time() - self.win_time > 5:
                 # Después de 5 segundos, puedes cerrar el juego
@@ -89,20 +88,14 @@ class GameView(arcade.View):
     def on_draw(self):
         arcade.start_render()
 
-        # Dibujar el jefe si aún está vivo
         if self.boss and self.boss.health > 0:
             self.boss.draw()
 
-        # Mostrar "You Win" si el jefe ha sido derrotado
         if self.game_over:
             arcade.draw_text("You Win! Gracias por jugar TyrianNavi", SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2,
                             arcade.color.WHITE, 54, anchor_x="center")
 
     def on_key_press(self, key, modifiers):
-        """Simulamos recibir daño presionando una tecla para verificar si se resta vida correctamente."""
         if key == arcade.key.SPACE and self.boss:
-            self.boss.take_damage(10)  # Ejemplo: Reducir la vida del jefe en 10 puntos
+            self.boss.take_damage(10)  
 
-
-# Usar la tecla "ESPACIO" para simular daño al jefe.
-# Esto es útil para probar si el jefe final se comporta correctamente antes de implementar más mecánicas.
